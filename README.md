@@ -44,6 +44,8 @@ npm test
 npm run typecheck
 ```
 
+Repository: https://github.com/Meteor-system/dsh-web-search
+
 ## Settings
 
 Plugin-owned namespace `dsh-web-search`:

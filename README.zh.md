@@ -44,6 +44,8 @@ npm test
 npm run typecheck
 ```
 
+仓库：https://github.com/Meteor-system/dsh-web-search
+
 ## 设置
 
 插件自有命名空间 `dsh-web-search`：
