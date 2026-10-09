@@ -73,3 +73,7 @@ The switch used to live in `dsh-fixes` (`webSearchEnabled`). It now lives here. 
 - The tool output does not name the engine that answered, so the agent cannot tell which engine a result came from.
 - The ranking lives in process memory only. A restart probes again.
 - Only these two engines are supported; third-party search APIs are out of scope.
+
+## License
+
+MIT. See [LICENSE](./LICENSE).
