@@ -158,6 +158,31 @@ describe("entity decoding", () => {
     const html = `<h2><a href="https://example.com">A &amp;lt; B</a></h2>`;
     expect(parseBingHtml(html)[0]?.title).toBe("A &lt; B");
   });
+
+  it("decodes decimal and hexadecimal numeric references", () => {
+    const html = `<h2><a href="https://example.com">A&#183;B &#x4E2D;&#22269;</a></h2>`;
+    expect(parseBingHtml(html)[0]?.title).toBe("A·B 中国");
+  });
+
+  it("decodes the named references Bing emits in snippets", () => {
+    const html =
+      `<h2><a href="https://example.com">Title</a></h2>` +
+      `<p>1&ensp;天前&ensp;&middot;&ensp;DeepSeek&mdash;AI&hellip;&copy;&reg;</p>`;
+    expect(parseBingHtml(html)[0]?.snippet).toBe("1 天前 · DeepSeek—AI…©®");
+  });
+
+  it("decodes numeric references in DuckDuckGo titles and snippets", () => {
+    const html = `<a class="result__a" href="https://example.com/x">Grok&#8217;s &#x2014; test</a>
+      <a class="result__snippet" href="#">a&#8211;b&#39;c</a>`;
+    const [source] = parseDuckDuckGoHtml(html);
+    expect(source?.title).toBe("Grok’s — test");
+    expect(source?.snippet).toBe("a–b'c");
+  });
+
+  it("does not decode an escaped numeric reference twice", () => {
+    const html = `<h2><a href="https://example.com">&amp;#183;</a></h2>`;
+    expect(parseBingHtml(html)[0]?.title).toBe("&#183;");
+  });
 });
 
 

@@ -24,15 +24,54 @@ export type FetchLike = (
   init?: { headers?: Record<string, string>; signal?: AbortSignal },
 ) => Promise<{ ok: boolean; status: number; text(): Promise<string> }>;
 
+// Named references that search result pages use in titles and snippets. &amp; is not listed:
+// it is decoded last, so a double-encoded "&amp;lt;" becomes "&lt;" and no further.
+const NAMED_ENTITIES: Readonly<Record<string, string>> = {
+  quot: '"',
+  apos: "'",
+  lt: "<",
+  gt: ">",
+  nbsp: " ",
+  ensp: " ",
+  emsp: " ",
+  thinsp: " ",
+  ndash: "–",
+  mdash: "—",
+  lsquo: "‘",
+  rsquo: "’",
+  ldquo: "“",
+  rdquo: "”",
+  hellip: "…",
+  middot: "·",
+  bull: "•",
+  copy: "©",
+  reg: "®",
+  trade: "™",
+  laquo: "«",
+  raquo: "»",
+  times: "×",
+  deg: "°",
+  sect: "§",
+  euro: "€",
+  yen: "¥",
+  pound: "£",
+};
+
+function decodeNumericReference(whole: string, body: string): string {
+  const code = body[0] === "x" || body[0] === "X" ? parseInt(body.slice(1), 16) : parseInt(body, 10);
+  const valid = Number.isInteger(code) && code > 0 && code <= 0x10ffff && (code < 0xd800 || code > 0xdfff);
+  return valid ? String.fromCodePoint(code) : whole;
+}
+
 function decodeEntities(value: string): string {
-  // &amp; goes last so a double-encoded "&amp;lt;" decodes one level only.
   return value
     .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
+    .replace(/&([a-z]+);/gi, (whole, name: string) => {
+      const key = name.toLowerCase();
+      if (key === "amp" || !Object.prototype.hasOwnProperty.call(NAMED_ENTITIES, key)) return whole;
+      return NAMED_ENTITIES[key] ?? whole;
+    })
+    .replace(/&#([xX][0-9a-fA-F]+|[0-9]+);/g, decodeNumericReference)
     .replace(/&amp;/gi, "&")
     .replace(/\s+/g, " ")
     .trim();
