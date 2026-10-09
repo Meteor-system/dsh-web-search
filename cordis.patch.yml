@@ -1,0 +1,8 @@
+# dsh-web-search: free web search for the agent, switched in General settings.
+# The web row selects the DuckDuckGo provider (Bing is the fallback inside it).
+- insert:
+    - id: dsh-web-search
+      name: dsh-web-search
+- id: web
+  config:
+    searchProvider: duckduckgo
