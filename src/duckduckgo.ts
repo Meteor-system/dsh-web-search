@@ -176,26 +176,3 @@ export async function searchBing(
   return limitSources(parseBingHtml(html), request.maxResults);
 }
 
-function withTimeout(signal: AbortSignal | undefined, ms: number): AbortSignal {
-  const timeout = AbortSignal.timeout(ms);
-  return signal === undefined ? timeout : AbortSignal.any([signal, timeout]);
-}
-
-export async function searchFreeWeb(
-  request: SearchRequest,
-  deps: { fetch: FetchLike; signal?: AbortSignal } = { fetch: globalThis.fetch },
-): Promise<SearchResult> {
-  try {
-    return await searchDuckDuckGo(request, {
-      fetch: deps.fetch,
-      signal: withTimeout(deps.signal, 5000),
-    });
-  } catch (error) {
-    if (deps.signal?.aborted === true) throw error;
-    return searchBing(request, {
-      fetch: deps.fetch,
-      signal: withTimeout(deps.signal, 5000),
-    });
-  }
-}
-

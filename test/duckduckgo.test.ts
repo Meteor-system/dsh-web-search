@@ -4,7 +4,6 @@ import {
   parseDuckDuckGoHtml,
   searchBing,
   searchDuckDuckGo,
-  searchFreeWeb,
   unwrapBingUrl,
   unwrapDuckDuckGoUrl,
 } from "../src/duckduckgo.ts";
@@ -104,45 +103,6 @@ describe("parseBingHtml", () => {
         snippet: "Official GitHub organization.",
       },
     ]);
-  });
-});
-
-describe("searchFreeWeb", () => {
-  it("falls back to Bing when DuckDuckGo is unreachable", async () => {
-    const result = await searchFreeWeb(
-      { query: "OpenAI" },
-      {
-        fetch: async (url) => {
-          if (String(url).includes("duckduckgo")) {
-            throw new Error("Connect Timeout Error");
-          }
-          return {
-            ok: true,
-            status: 200,
-            text: async () => BING_FIXTURE,
-          };
-        },
-      },
-    );
-    expect(result.sources[0]?.url).toBe("https://openai.com");
-  });
-
-  it("bounds the Bing fallback with a timeout even when the caller passes no signal", async () => {
-    const signals: Array<AbortSignal | undefined> = [];
-    await searchFreeWeb(
-      { query: "OpenAI" },
-      {
-        fetch: async (url, init) => {
-          if (String(url).includes("duckduckgo")) {
-            throw new Error("Connect Timeout Error");
-          }
-          signals.push(init?.signal);
-          return { ok: true, status: 200, text: async () => BING_FIXTURE };
-        },
-      },
-    );
-    expect(signals).toHaveLength(1);
-    expect(signals[0]).toBeDefined();
   });
 });
 

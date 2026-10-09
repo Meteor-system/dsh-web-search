@@ -1,6 +1,12 @@
-import { DUCKDUCKGO_PROVIDER_ID, searchFreeWeb } from "./duckduckgo.js";
+import { DUCKDUCKGO_PROVIDER_ID } from "./duckduckgo.js";
+import { EngineRouter } from "./engines.js";
 import { Config } from "./config.js";
-import { parseWebSearchSettings, WEB_SEARCH_NAMESPACE } from "./settings.js";
+import {
+  normalizeEngineOrder,
+  parseWebSearchSettings,
+  WEB_SEARCH_NAMESPACE,
+  type EngineId,
+} from "./settings.js";
 
 const LOG_PREFIX = "[dsh-web-search]";
 
@@ -11,6 +17,8 @@ export { Config };
 // The row config of this plugin. Fields are volatile in 0.1.7, so the live value can be
 // newer than the stored section; read it first, as dsh-fixes does.
 let activeConfig: unknown;
+// One router per process: it holds the reachability ranking between searches.
+const router = new EngineRouter({ fetch: globalThis.fetch });
 
 type SettingsLike = {
   get?(namespace: string): unknown;
@@ -65,9 +73,24 @@ function webSearchSchema(value: unknown) {
   return parseWebSearchSettings(value);
 }
 
+/** The user's engine order, read live: the plugin row config wins over the stored section. */
+export function readEngineOrder(settings: SettingsLike, config?: unknown): EngineId[] {
+  if (isRecord(config) && "engineOrder" in config) {
+    return normalizeEngineOrder(unwrapField(config.engineOrder));
+  }
+  try {
+    return parseWebSearchSettings(settings.get?.(WEB_SEARCH_NAMESPACE)).engineOrder;
+  } catch {
+    return [];
+  }
+}
+
 webSearchSchema.toJSON = () => ({
   type: "object",
-  properties: { enabled: { type: "boolean" } },
+  properties: {
+    enabled: { type: "boolean" },
+    engineOrder: { type: "array", items: { type: "string", enum: ["duckduckgo", "bing"] } },
+  },
 });
 
 function installNamespace(ctx: PluginContext): void {
@@ -91,7 +114,11 @@ function installSearch(ctx: PluginContext): void {
       id: DUCKDUCKGO_PROVIDER_ID,
       // Read on every offer, so the General switch takes effect without a restart.
       available: () => readWebSearchEnabled(ctx.settings, activeConfig),
-      search: (request, signal) => searchFreeWeb(request, { fetch: globalThis.fetch, signal }),
+      search: (request, signal) =>
+        router.search(request, {
+          order: readEngineOrder(ctx.settings, activeConfig),
+          signal,
+        }),
     });
     return () => {
       dispose();

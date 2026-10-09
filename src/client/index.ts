@@ -1,5 +1,12 @@
 import { createElement, useSyncExternalStore, type ChangeEvent, type CSSProperties } from "react";
-import { parseWebSearchSettings, type WebSearchSettings, WEB_SEARCH_NAMESPACE } from "../settings.js";
+import {
+  choiceToOrder,
+  orderToChoice,
+  parseWebSearchSettings,
+  type EngineOrderChoice,
+  type WebSearchSettings,
+  WEB_SEARCH_NAMESPACE,
+} from "../settings.js";
 
 export const name = "dsh-web-search";
 // Dynamic Client packages must declare every service they read; configuration is read
@@ -7,7 +14,12 @@ export const name = "dsh-web-search";
 export const inject = ["slots", "configForms"];
 
 const LOG_PREFIX = "[dsh-web-search]";
-const FALLBACK: WebSearchSettings = { enabled: true };
+const FALLBACK: WebSearchSettings = { enabled: true, engineOrder: [] };
+const ORDER_OPTIONS: ReadonlyArray<readonly [EngineOrderChoice, string]> = [
+  ["auto", "自动（测速排序）"],
+  ["duckduckgo,bing", "DuckDuckGo 优先，Bing 兜底"],
+  ["bing,duckduckgo", "Bing 优先，DuckDuckGo 兜底"],
+];
 
 type ConfigForm = {
   getSnapshot(): { value?: unknown };
@@ -109,6 +121,33 @@ function WebSearchRow(props: { scope: SettingsScope | undefined }) {
       "启用联网搜索",
     ),
     createElement("p", { style: noteStyle }, "关闭后，智能体不再能调用联网搜索。"),
+    createElement(
+      "label",
+      { style: checkStyle },
+      "搜索引擎顺序",
+      createElement(
+        "select",
+        {
+          value: orderToChoice(value.engineOrder),
+          disabled: scope === undefined,
+          onChange: (event: ChangeEvent<HTMLSelectElement>) => {
+            scope
+              ?.set("engineOrder", choiceToOrder(event.currentTarget.value))
+              .catch((reason: unknown) => {
+                console.warn(LOG_PREFIX, "save failed", reason);
+              });
+          },
+        },
+        ...ORDER_OPTIONS.map(([choice, label]) =>
+          createElement("option", { key: choice, value: choice }, label),
+        ),
+      ),
+    ),
+    createElement(
+      "p",
+      { style: noteStyle },
+      "自动模式会测试两个引擎，能返回结果的排在前面；指定顺序后，按此顺序逐个尝试。",
+    ),
   );
 }
 
